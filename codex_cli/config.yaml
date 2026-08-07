@@ -1,0 +1,56 @@
+name: "Codex CLI SSH"
+version: "2.1.1"
+slug: "codex_cli_ssh"
+description: "Privileged SSH/CLI workspace with persistent Codex and Home Assistant MCP configuration"
+url: "https://developers.openai.com/codex/cli"
+startup: services
+boot: auto
+init: false
+advanced: true
+arch:
+  - amd64
+  - aarch64
+ports:
+  22/tcp: 2222
+ports_description:
+  22/tcp: "SSH access for Codex Desktop"
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /homeassistant
+  - type: addons
+    read_only: false
+    path: /addons
+  - type: all_addon_configs
+    read_only: false
+    path: /addon_configs
+  - type: backup
+    read_only: false
+    path: /backup
+  - type: share
+    read_only: false
+    path: /share
+  - type: ssl
+    read_only: false
+    path: /ssl
+  - type: media
+    read_only: false
+    path: /media
+environment:
+  CODEX_HOME: /data/codex
+  HOME: /root
+full_access: true
+apparmor: false
+docker_api: true
+hassio_api: true
+hassio_role: admin
+homeassistant_api: true
+options:
+  authorized_keys: []
+  auto_configure_home_assistant_mcp: true
+  workspace: "/homeassistant"
+schema:
+  authorized_keys:
+    - str
+  auto_configure_home_assistant_mcp: bool
+  workspace: str

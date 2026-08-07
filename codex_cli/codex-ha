@@ -1,0 +1,5 @@
+#!/bin/sh
+export CODEX_HOME=/data/codex
+export HOME=/root
+cd "${CODEX_WORKSPACE:-/homeassistant}" 2>/dev/null || exit 1
+exec /usr/local/bin/codex "$@"
