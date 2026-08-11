@@ -21,6 +21,7 @@ RUN apk add --no-cache \
       nodejs \
       npm \
       openssh-server \
+      patch \
       python3 \
     && npm install --global @openai/codex@latest \
     && npm cache clean --force \
@@ -36,7 +37,15 @@ RUN apk add --no-cache \
 COPY run.sh /run.sh
 COPY init_codex.py /usr/local/libexec/init_codex.py
 COPY codex-ha /usr/local/bin/codex-ha
-RUN chmod 755 /run.sh /usr/local/libexec/init_codex.py /usr/local/bin/codex-ha
+COPY tests/container-smoke.sh /usr/local/libexec/container-smoke.sh
+COPY tests/tooling-integration.sh /usr/local/libexec/codex-tooling-integration.sh
+RUN chmod 755 \
+      /run.sh \
+      /usr/local/libexec/init_codex.py \
+      /usr/local/bin/codex-ha \
+      /usr/local/libexec/container-smoke.sh \
+      /usr/local/libexec/codex-tooling-integration.sh \
+    && /usr/local/libexec/container-smoke.sh
 
 WORKDIR /homeassistant
 EXPOSE 22

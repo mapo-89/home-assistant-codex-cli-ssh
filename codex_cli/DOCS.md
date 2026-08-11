@@ -27,7 +27,26 @@ ssh -p 2222 root@HOME_ASSISTANT_IP
 
 `CODEX_HOME` is fixed to `/data/codex` for all processes. The Supervisor stores this directory persistently and includes it in add-on backups.
 
-On the first start, an existing `/homeassistant/.codex` or legacy `/config/.codex` directory is migrated to `/data/codex` if the new destination is still empty. `/root/.codex` is then linked to the same directory.
+On the first start, an existing `/homeassistant/.codex` or legacy `/config/.codex` directory is migrated to `/data/codex` if the new destination is still empty.
+
+Starting with version `2.2.0`, `/root/.codex` is intentionally absent. Older
+versions created `/root/.codex -> /data/codex`; that writable symlink crossed a
+path which Codex protects as read-only inside its Linux Bubblewrap sandbox and
+could prevent the internal `apply_patch` tool from starting.
+
+At startup, version `2.2.0` handles legacy paths as follows:
+
+- An expected `/root/.codex -> /data/codex` symlink is removed. The target and
+  all persistent data remain untouched.
+- A real legacy `/root/.codex` directory is copied to a uniquely named
+  `/data/codex/legacy-root-dot-codex*` backup, missing files are merged into
+  `/data/codex`, and the legacy directory is removed.
+- A symlink pointing anywhere other than `/data/codex` is rejected instead of
+  being removed automatically.
+
+No bind mount or additional Linux capability is required. `CODEX_HOME` is an
+official Codex environment variable and directs config, authentication, logs,
+sessions, skills, and state to `/data/codex` directly.
 
 The add-on ensures that `config.toml` contains:
 
@@ -36,6 +55,22 @@ cli_auth_credentials_store = "file"
 ```
 
 This keeps ChatGPT or API authentication and refreshed credentials in `/data/codex/auth.json`.
+
+## Sandbox and writable paths
+
+The app does not disable Codex sandboxing and does not add `CAP_SYS_ADMIN` or
+other mount privileges. The host-side `/root/.codex` alias is absent. Inside a
+tool sandbox, Bubblewrap may synthesize a protected read-only directory at that
+path; critically, it is no longer a symlink. The Codex parent process keeps
+using persistent `/data/codex` directly.
+
+Home Assistant configuration is mounted at `/homeassistant` in this app. Set
+`workspace: "/homeassistant"` to make it the primary writable workspace. Other
+mapped directories such as `/addons`, `/addon_configs`, and `/share` remain
+subject to the active Codex permission profile; add them as writable roots only
+when the task requires them. The legacy `/config` name is not created as a
+symlink, avoiding another cross-mount alias; `/homeassistant` is the canonical
+path inside this app.
 
 ## Home Assistant MCP
 
@@ -98,6 +133,7 @@ For direct root access to the HAOS host, configure the separate official debug S
 ```sh
 ssh -p 2222 root@HOME_ASSISTANT_IP 'printf "CODEX_HOME=%s\n" "$CODEX_HOME"; codex --version'
 ssh -p 2222 root@HOME_ASSISTANT_IP 'codex login status; codex mcp list'
+ssh -p 2222 root@HOME_ASSISTANT_IP 'command -v patch; test ! -e /root/.codex'
 ```
 
 Restart the add-on once, repeat the second command, and confirm that the MCP server remains configured.
@@ -107,6 +143,23 @@ The successful startup message is:
 ```text
 Home Assistant MCP configuration is present
 ```
+
+### Tooling integration test
+
+The image build runs `/usr/local/libexec/container-smoke.sh`, which verifies
+that `patch` is installed, `CODEX_HOME=/data/codex`, and `/root/.codex` is not a
+symlink.
+
+The internal `apply_patch` helper exists only inside a Codex tool execution
+context. From a Codex session whose workspace is `/root`, ask Codex to run:
+
+```sh
+/usr/local/libexec/codex-tooling-integration.sh
+```
+
+This creates a temporary file under `/root`, modifies it through the internal
+`apply_patch`, applies a second unified diff with the Alpine `patch` command,
+verifies both results, and removes the temporary directory.
 
 ## Troubleshooting
 
@@ -128,6 +181,18 @@ Restart Codex CLI SSH so its app server reloads `/data/codex/config.toml`. Then 
 ### Workspace does not exist
 
 The configured `workspace` must be an existing directory. If it is unavailable, the add-on falls back to `/homeassistant`.
+
+### `apply_patch` reports a writable symlink error
+
+Confirm that the app is version `2.2.0` or newer and restart it. Then verify:
+
+```sh
+printf 'CODEX_HOME=%s\n' "$CODEX_HOME"
+test ! -e /root/.codex && echo sandbox-safe
+```
+
+Do not recreate `/root/.codex` as a symlink. Persistent state remains available
+through `CODEX_HOME=/data/codex`.
 
 ## Security recommendations
 

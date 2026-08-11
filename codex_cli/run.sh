@@ -29,15 +29,10 @@ PY
 
 python3 /usr/local/libexec/init_codex.py "${OPTIONS_FILE}"
 
-if [[ -e /root/.codex && ! -L /root/.codex ]]; then
-    if [[ -z "$(find /root/.codex -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
-        rmdir /root/.codex
-    else
-        cp -a /root/.codex/. "${CODEX_HOME}/"
-        rm -rf /root/.codex
-    fi
+if [[ -e /root/.codex || -L /root/.codex ]]; then
+    bashio::log.error "/root/.codex must not exist; CODEX_HOME is ${CODEX_HOME}"
+    exit 1
 fi
-ln -sfn "${CODEX_HOME}" /root/.codex
 
 for type in rsa ecdsa ed25519; do
     persistent="/data/ssh_host_${type}_key"
@@ -96,6 +91,7 @@ bashio::log.info "Node.js: $(node --version)"
 bashio::log.info "SSH server ready on container port 22"
 bashio::log.info "Workspace: ${workspace}"
 bashio::log.info "Persistent Codex home: ${CODEX_HOME}"
+bashio::log.info "Sandbox-safe Codex home: /root/.codex is intentionally absent"
 bashio::log.warning "This app has privileged Supervisor, Docker, hardware, and writable data-directory access."
 
 exec /usr/sbin/sshd -D -e

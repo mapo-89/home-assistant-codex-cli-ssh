@@ -36,7 +36,19 @@ for README, documentation, icon, and logo changes.
 ```sh
 sh -n codex_cli/run.sh scripts/install-local.sh
 python3 -c 'compile(open("codex_cli/init_codex.py", encoding="utf-8").read(), "codex_cli/init_codex.py", "exec")'
+python3 codex_cli/tests/test_init_codex.py
 ```
+
+After rebuilding and restarting the app, ask Codex to run the runtime test from
+a `/root` workspace:
+
+```sh
+/usr/local/libexec/codex-tooling-integration.sh
+```
+
+The runtime test intentionally requires a Codex tool execution context because
+the internal `apply_patch` helper is injected into that context rather than
+installed as a global shell command.
 
 ### Development workflow
 
@@ -63,7 +75,11 @@ python3 -c 'compile(open("codex_cli/init_codex.py", encoding="utf-8").read(), "c
 │   ├── logo.png
 │   ├── run.sh
 │   ├── init_codex.py
-│   └── codex-ha
+│   ├── codex-ha
+│   └── tests/
+│       ├── container-smoke.sh
+│       ├── tooling-integration.sh
+│       └── test_init_codex.py
 └── scripts/
     └── install-local.sh
 ```
@@ -77,4 +93,3 @@ MIT. See [`LICENSE`](LICENSE).
 This is an unofficial community project. It is not affiliated with or endorsed
 by OpenAI or the Home Assistant project. OpenAI, Codex, and Home Assistant may
 be trademarks of their respective owners.
-

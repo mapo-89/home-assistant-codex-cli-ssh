@@ -12,10 +12,53 @@ import urllib.request
 
 CODEX_HOME = Path(os.environ.get("CODEX_HOME", "/data/codex"))
 CONFIG = CODEX_HOME / "config.toml"
+ROOT_CODEX_ALIAS = Path("/root/.codex")
 S6_ENVIRONMENT = Path("/run/s6/container_environment")
 
 def log(level: str, message: str) -> None:
     print(f"[{level}] {message}", file=sys.stderr if level == "warning" else sys.stdout)
+
+def _copy_path(source: Path, target: Path) -> None:
+    if source.is_dir() and not source.is_symlink():
+        shutil.copytree(source, target, symlinks=True)
+    else:
+        shutil.copy2(source, target, follow_symlinks=False)
+
+def _unused_backup_path(codex_home: Path) -> Path:
+    base = codex_home / "legacy-root-dot-codex"
+    if not base.exists():
+        return base
+    for index in range(2, 1000):
+        candidate = codex_home / f"legacy-root-dot-codex-{index}"
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError("No free legacy /root/.codex backup path is available")
+
+def prepare_root_codex_alias(
+    alias: Path = ROOT_CODEX_ALIAS,
+    codex_home: Path = CODEX_HOME,
+) -> None:
+    """Remove the legacy alias without losing data or weakening the sandbox."""
+    if alias.is_symlink():
+        if alias.resolve(strict=False) != codex_home.resolve(strict=False):
+            raise RuntimeError(f"Refusing to remove unexpected Codex symlink: {alias}")
+        alias.unlink()
+        log("info", f"Removed legacy Codex home symlink {alias}")
+        return
+    if not alias.exists():
+        return
+    if not alias.is_dir():
+        raise RuntimeError(f"Unexpected Codex home path type: {alias}")
+
+    backup = _unused_backup_path(codex_home)
+    shutil.copytree(alias, backup, symlinks=True)
+    for item in alias.iterdir():
+        target = codex_home / item.name
+        if target.exists() or target.is_symlink():
+            continue
+        _copy_path(item, target)
+    shutil.rmtree(alias)
+    log("info", f"Migrated legacy {alias} and preserved a backup at {backup}")
 
 def migrate_legacy_state() -> None:
     if any(CODEX_HOME.iterdir()):
@@ -93,6 +136,7 @@ def main() -> int:
     options = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     CODEX_HOME.mkdir(parents=True, exist_ok=True)
     os.chmod(CODEX_HOME, 0o700)
+    prepare_root_codex_alias()
     migrate_legacy_state()
     text = CONFIG.read_text(encoding="utf-8") if CONFIG.exists() else ""
     text = ensure_top_level_setting(text)

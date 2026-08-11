@@ -18,7 +18,7 @@ if [ ! -f "$source_dir/config.yaml" ] || [ ! -f "$source_dir/Dockerfile" ]; then
     exit 2
 fi
 
-mkdir -p "$target_dir"
+mkdir -p "$target_dir" "$target_dir/tests"
 
 for file in DOCS.md Dockerfile README.md config.yaml icon.png logo.png; do
     install -m 0644 "$source_dir/$file" "$target_dir/$file"
@@ -26,6 +26,10 @@ done
 
 for file in run.sh init_codex.py codex-ha; do
     install -m 0755 "$source_dir/$file" "$target_dir/$file"
+done
+
+for file in container-smoke.sh tooling-integration.sh test_init_codex.py; do
+    install -m 0755 "$source_dir/tests/$file" "$target_dir/tests/$file"
 done
 
 echo "Installed Codex CLI SSH source in $target_dir"

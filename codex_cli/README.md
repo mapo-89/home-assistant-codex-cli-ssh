@@ -8,6 +8,8 @@ A privileged local Home Assistant add-on that provides a dedicated Codex CLI env
 - Persistent Codex state in `/data/codex`
 - File-based authentication storage for headless sessions
 - Automatic discovery and configuration of the Home Assistant MCP Server
+- Persistent Alpine `patch` command for unified diffs
+- Sandbox-compatible internal Codex `apply_patch` support
 - Persistent SSH host keys in `/data`
 - Writable Home Assistant configuration at `/homeassistant`
 - Writable access to local add-ons, add-on configuration, backups, share, SSL, and media

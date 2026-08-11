@@ -5,13 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] - 2026-08-11
 
 ### Added
 
 - Home Assistant app icon and logo.
 - Standalone local-development repository layout.
 - Safe local installation helper for `/addons/codex_cli`.
+- Alpine `patch` package in the app image.
+- Build and runtime integration tests for `patch`, the internal Codex
+  `apply_patch` helper, and the Codex home layout.
+
+### Changed
+
+- Keep `/data/codex` as the only Codex state path and stop creating the
+  `/root/.codex` symlink that conflicted with Bubblewrap path protection.
+- Migrate an expected legacy symlink safely; preserve and merge a legacy real
+  `/root/.codex` directory before removing it.
+
+### Security
+
+- Restore `apply_patch` compatibility without adding mount capabilities,
+  disabling Bubblewrap, or widening the configured writable roots.
 
 ## [2.1.1] - 2026-08-04
 
@@ -34,4 +49,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSH access using configured public keys.
 - Automatic Home Assistant MCP discovery.
 - Writable Home Assistant managed-directory mappings and privileged APIs.
-
