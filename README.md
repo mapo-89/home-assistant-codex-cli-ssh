@@ -1,12 +1,14 @@
 # Home Assistant Codex CLI SSH
 
-[![Version](https://img.shields.io/badge/version-2.3.0-03a9f4.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.1-03a9f4.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Add--on-41BDF5.svg?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
 [![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-6f42c1.svg)](codex_cli/config.yaml)
 [![GitHub issues](https://img.shields.io/github/issues/mapo-89/home-assistant-codex-cli-ssh.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/issues)
 [![GitHub stars](https://img.shields.io/github/stars/mapo-89/home-assistant-codex-cli-ssh.svg?style=flat)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/mapo-89/home-assistant-codex-cli-ssh.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/commits/main)
+
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmapo-89%2Fhome-assistant-codex-cli-ssh)
 
 <a href="https://buymeacoffee.com/mapo"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="60"></a>
 

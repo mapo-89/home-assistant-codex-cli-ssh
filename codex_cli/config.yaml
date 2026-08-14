@@ -1,5 +1,5 @@
 name: "Codex CLI SSH"
-version: "2.3.0"
+version: "2.3.1"
 slug: "codex_cli_ssh"
 description: "Privileged SSH/CLI workspace with persistent Codex and Home Assistant MCP configuration"
 url: "https://developers.openai.com/codex/cli"

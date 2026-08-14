@@ -1,6 +1,6 @@
 # Codex CLI SSH
 
-[![Version](https://img.shields.io/badge/version-2.3.0-03a9f4.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.1-03a9f4.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/blob/main/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/blob/main/LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Add--on-41BDF5.svg?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
 [![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-6f42c1.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh)
