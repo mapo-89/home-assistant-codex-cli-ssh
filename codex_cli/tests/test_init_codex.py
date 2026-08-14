@@ -8,6 +8,7 @@ import unittest
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "init_codex.py"
+ADDON_DIR = MODULE_PATH.parent
 SPEC = importlib.util.spec_from_file_location("init_codex", MODULE_PATH)
 assert SPEC and SPEC.loader
 init_codex = importlib.util.module_from_spec(SPEC)
@@ -15,6 +16,19 @@ SPEC.loader.exec_module(init_codex)
 
 
 class RootCodexAliasTests(unittest.TestCase):
+    def test_addon_uses_config_as_canonical_mount(self) -> None:
+        addon_config = (ADDON_DIR / "config.yaml").read_text(encoding="utf-8")
+        dockerfile = (ADDON_DIR / "Dockerfile").read_text(encoding="utf-8")
+        launcher = (ADDON_DIR / "codex-ha").read_text(encoding="utf-8")
+        run_script = (ADDON_DIR / "run.sh").read_text(encoding="utf-8")
+
+        self.assertIn("path: /config", addon_config)
+        self.assertIn('workspace: "/config"', addon_config)
+        self.assertNotIn("path: /homeassistant", addon_config)
+        self.assertIn("WORKDIR /config", dockerfile)
+        self.assertIn("CODEX_WORKSPACE:-/config", launcher)
+        self.assertIn('workspace="/config"', run_script)
+
     def test_expected_symlink_is_removed_without_touching_data(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

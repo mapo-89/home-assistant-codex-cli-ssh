@@ -1,5 +1,5 @@
 name: "Codex CLI SSH"
-version: "2.2.0"
+version: "2.2.1"
 slug: "codex_cli_ssh"
 description: "Privileged SSH/CLI workspace with persistent Codex and Home Assistant MCP configuration"
 url: "https://developers.openai.com/codex/cli"
@@ -17,7 +17,7 @@ ports_description:
 map:
   - type: homeassistant_config
     read_only: false
-    path: /homeassistant
+    path: /config
   - type: addons
     read_only: false
     path: /addons
@@ -48,7 +48,7 @@ homeassistant_api: true
 options:
   authorized_keys: []
   auto_configure_home_assistant_mcp: true
-  workspace: "/homeassistant"
+  workspace: "/config"
 schema:
   authorized_keys:
     - str

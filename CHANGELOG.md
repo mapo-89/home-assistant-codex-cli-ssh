@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-08-14
+
+### Changed
+
+- Mount Home Assistant configuration at the conventional `/config` path.
+- Use `/config` as the default Docker working directory, SSH workspace, and
+  `codex-ha` workspace.
+- Keep `/homeassistant/.codex` as a legacy migration source only.
+
+### Migration
+
+- Update custom `workspace` options and scripts from `/homeassistant` to
+  `/config`. The former `/homeassistant` mount is no longer created.
+
 ## [2.2.0] - 2026-08-11
 
 ### Added

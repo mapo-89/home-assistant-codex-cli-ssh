@@ -73,16 +73,16 @@ LogLevel INFO
 Subsystem sftp internal-sftp
 SSHD
 
-workspace="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("workspace") or "/homeassistant")' "${OPTIONS_FILE}")"
+workspace="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("workspace") or "/config")' "${OPTIONS_FILE}")"
 if [[ ! -d "${workspace}" ]]; then
-    bashio::log.warning "Configured workspace ${workspace} does not exist; using /homeassistant"
-    workspace="/homeassistant"
+    bashio::log.warning "Configured workspace ${workspace} does not exist; using /config"
+    workspace="/config"
 fi
 printf '%s\n' \
     'export CODEX_HOME=/data/codex' \
     'export HOME=/root' \
     'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
-    "cd $(printf '%q' "${workspace}") 2>/dev/null || cd /homeassistant 2>/dev/null || true" \
+    "cd $(printf '%q' "${workspace}") 2>/dev/null || cd /config 2>/dev/null || true" \
     > /root/.profile
 cp /root/.profile /root/.bash_profile
 

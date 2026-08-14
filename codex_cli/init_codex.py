@@ -63,7 +63,7 @@ def prepare_root_codex_alias(
 def migrate_legacy_state() -> None:
     if any(CODEX_HOME.iterdir()):
         return
-    for legacy in (Path("/homeassistant/.codex"), Path("/config/.codex")):
+    for legacy in (Path("/config/.codex"), Path("/homeassistant/.codex")):
         if not legacy.is_dir() or legacy.resolve() == CODEX_HOME.resolve():
             continue
         for item in legacy.iterdir():

@@ -34,6 +34,8 @@ RUN apk add --no-cache \
       > /etc/profile.d/codex.sh \
     && chmod 644 /etc/profile.d/codex.sh
 
+WORKDIR /config
+
 COPY run.sh /run.sh
 COPY init_codex.py /usr/local/libexec/init_codex.py
 COPY codex-ha /usr/local/bin/codex-ha
@@ -47,6 +49,5 @@ RUN chmod 755 \
       /usr/local/libexec/codex-tooling-integration.sh \
     && /usr/local/libexec/container-smoke.sh
 
-WORKDIR /homeassistant
 EXPOSE 22
 CMD [ "/run.sh" ]

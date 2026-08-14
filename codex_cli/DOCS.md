@@ -12,7 +12,7 @@
 authorized_keys:
   - "ssh-ed25519 AAAA... codex-homeassistant"
 auto_configure_home_assistant_mcp: true
-workspace: "/homeassistant"
+workspace: "/config"
 ```
 
 6. Install or update the local add-on, then start it. The default host port is `2222`.
@@ -27,7 +27,9 @@ ssh -p 2222 root@HOME_ASSISTANT_IP
 
 `CODEX_HOME` is fixed to `/data/codex` for all processes. The Supervisor stores this directory persistently and includes it in add-on backups.
 
-On the first start, an existing `/homeassistant/.codex` or legacy `/config/.codex` directory is migrated to `/data/codex` if the new destination is still empty.
+On the first start, an existing `/config/.codex` or legacy
+`/homeassistant/.codex` directory is migrated to `/data/codex` if the new
+destination is still empty.
 
 Starting with version `2.2.0`, `/root/.codex` is intentionally absent. Older
 versions created `/root/.codex -> /data/codex`; that writable symlink crossed a
@@ -64,13 +66,13 @@ tool sandbox, Bubblewrap may synthesize a protected read-only directory at that
 path; critically, it is no longer a symlink. The Codex parent process keeps
 using persistent `/data/codex` directly.
 
-Home Assistant configuration is mounted at `/homeassistant` in this app. Set
-`workspace: "/homeassistant"` to make it the primary writable workspace. Other
+Home Assistant configuration is mounted at `/config` in this app. Set
+`workspace: "/config"` to make it the primary writable workspace. Other
 mapped directories such as `/addons`, `/addon_configs`, and `/share` remain
 subject to the active Codex permission profile; add them as writable roots only
-when the task requires them. The legacy `/config` name is not created as a
-symlink, avoiding another cross-mount alias; `/homeassistant` is the canonical
-path inside this app.
+when the task requires them. Starting with version `2.2.1`, `/config` is the
+canonical path inside this app. The former `/homeassistant` mount is no longer
+created; update saved workspace settings or scripts that still reference it.
 
 ## Home Assistant MCP
 
@@ -111,7 +113,7 @@ codex-ha
 
 | Path | Contents |
 |---|---|
-| `/homeassistant` | Writable Home Assistant configuration |
+| `/config` | Writable Home Assistant configuration |
 | `/addons` | Writable local add-on sources |
 | `/addon_configs` | Writable configuration for all add-ons |
 | `/backup` | Writable backups |
@@ -180,7 +182,7 @@ Restart Codex CLI SSH so its app server reloads `/data/codex/config.toml`. Then 
 
 ### Workspace does not exist
 
-The configured `workspace` must be an existing directory. If it is unavailable, the add-on falls back to `/homeassistant`.
+The configured `workspace` must be an existing directory. If it is unavailable, the add-on falls back to `/config`.
 
 ### `apply_patch` reports a writable symlink error
 
