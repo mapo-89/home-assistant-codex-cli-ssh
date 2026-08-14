@@ -1,6 +1,6 @@
 # Codex CLI SSH
 
-[![Version](https://img.shields.io/badge/version-2.3.1-03a9f4.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.4.0-03a9f4.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/blob/main/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh/blob/main/LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Add--on-41BDF5.svg?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
 [![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-6f42c1.svg)](https://github.com/mapo-89/home-assistant-codex-cli-ssh)
@@ -8,10 +8,11 @@
 <a href="https://buymeacoffee.com/mapo"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="60"></a>
 
 A privileged local Home Assistant add-on that provides a dedicated Codex CLI
-environment through SSH and a Home Assistant Ingress web terminal.
+environment through SSH and an integrated Ingress dashboard.
 
 ## Features
 
+- Storage dashboard with previewed, confirmation-protected session cleanup
 - Home Assistant Ingress terminal with a persistent `tmux` session
 - Codex CLI with the `codex-ha` launcher
 - Persistent Codex state in `/data/codex`
@@ -26,13 +27,14 @@ security and troubleshooting.
 ## Security model
 
 This add-on is intentionally highly privileged. Anyone who can open its Ingress
-terminal or authenticate with a configured SSH key can modify or destroy Home
+dashboard or authenticate with a configured SSH key can modify or destroy Home
 Assistant data. Use dedicated SSH keys and restrict app access to trusted Home
 Assistant administrators.
 
-The `codex-cleanup` CLI is dry-run by default and requires `--yes` before it
-removes archived sessions. It never selects active sessions, authentication,
-configuration, or unrelated files.
+The cleanup API binds only to container loopback behind Ingress, requires a
+per-start request token, previews selections, and requires an explicit
+`DELETE` confirmation before removing direct non-symlink archived-session
+files. It never selects active sessions, authentication or configuration.
 
 ## Support
 

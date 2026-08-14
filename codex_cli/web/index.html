@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Codex CLI SSH</title>
+  <style>
+    :root {
+      --primary: #03a9f4;
+      --primary-strong: #0288d1;
+      --danger: #db4437;
+      --warning: #f9a825;
+      --bg: #f5f7fa;
+      --card: #fff;
+      --text: #202124;
+      --muted: #687078;
+      --border: #dfe3e8;
+      --shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11151a;
+        --card: #1c2229;
+        --text: #eef2f5;
+        --muted: #a9b2bb;
+        --border: #38424c;
+        --shadow: 0 4px 18px rgba(0,0,0,.3);
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    header { display: flex; align-items: center; gap: 14px; padding: 15px 20px; background: var(--card); border-bottom: 1px solid var(--border); }
+    .mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg,var(--primary),#536dfe); color: white; font-weight: 800; font-size: 19px; }
+    h1 { margin: 0; font-size: 20px; }
+    header p { margin: 1px 0 0; color: var(--muted); font-size: 13px; }
+    .version { margin-left: auto; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 12px; }
+    nav { display: flex; gap: 8px; padding: 12px 20px 0; max-width: 1120px; margin: auto; }
+    button, select, input { font: inherit; }
+    button { border: 0; border-radius: 8px; padding: 10px 15px; cursor: pointer; font-weight: 650; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .tab { background: transparent; color: var(--muted); }
+    .tab.active { background: var(--card); color: var(--primary-strong); box-shadow: var(--shadow); }
+    main { max-width: 1120px; margin: auto; padding: 16px 20px 26px; }
+    .hidden { display: none !important; }
+    .grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
+    .metric-label { color: var(--muted); font-size: 13px; }
+    .metric { margin-top: 5px; font-size: 26px; font-weight: 750; }
+    .metric small { color: var(--muted); font-size: 13px; font-weight: 500; }
+    .manager { display: grid; grid-template-columns: minmax(0,1fr) minmax(280px,.8fr); gap: 14px; margin-top: 14px; }
+    h2 { margin: 0 0 8px; font-size: 18px; }
+    .help { color: var(--muted); margin: 0 0 16px; }
+    label { display: block; margin: 12px 0 5px; font-weight: 650; }
+    select, input[type="number"], input[type="text"] { width: 100%; padding: 10px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
+    .check { display: flex; gap: 9px; align-items: center; font-weight: 500; }
+    .check input { width: 18px; height: 18px; }
+    .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    .primary { background: var(--primary); color: white; }
+    .danger { background: var(--danger); color: white; }
+    .secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .result { min-height: 180px; }
+    .result dl { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; margin: 14px 0; }
+    .result dt { color: var(--muted); }
+    .result dd { margin: 0; font-weight: 700; }
+    .notice { padding: 11px 12px; border-left: 4px solid var(--warning); background: color-mix(in srgb,var(--warning) 12%,transparent); border-radius: 5px; }
+    .success { border-left-color: #2e7d32; background: color-mix(in srgb,#2e7d32 12%,transparent); }
+    .error { border-left-color: var(--danger); background: color-mix(in srgb,var(--danger) 12%,transparent); }
+    #terminalView { height: calc(100vh - 145px); min-height: 500px; padding: 0; overflow: hidden; }
+    iframe { width: 100%; height: 100%; border: 0; background: #000; }
+    dialog { width: min(500px,calc(100% - 28px)); border: 1px solid var(--border); border-radius: 13px; padding: 0; background: var(--card); color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+    dialog::backdrop { background: rgba(0,0,0,.55); }
+    .dialog-body { padding: 20px; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
+    code { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 2px 5px; }
+    @media (max-width: 760px) { .grid, .manager { grid-template-columns: 1fr; } header { padding: 12px; } nav, main { padding-left: 12px; padding-right: 12px; } .version { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="mark">C</div>
+    <div><h1>Codex CLI SSH</h1><p>Terminal and persistent-storage management</p></div>
+    <span class="version">v2.4.0</span>
+  </header>
+  <nav aria-label="Views">
+    <button class="tab active" data-view="storage">Storage</button>
+    <button class="tab" data-view="terminal">Terminal</button>
+  </nav>
+  <main>
+    <section id="storageView">
+      <div class="grid">
+        <article class="card"><div class="metric-label">Persistent Codex home</div><div class="metric" id="homeSize">—</div></article>
+        <article class="card"><div class="metric-label">Archived sessions</div><div class="metric" id="archiveSize">— <small id="archiveCount"></small></div></article>
+        <article class="card"><div class="metric-label">Generated images</div><div class="metric" id="imageSize">—</div></article>
+      </div>
+      <div class="manager">
+        <article class="card">
+          <h2>Archived-session cleanup</h2>
+          <p class="help">Preview first. Active sessions, authentication, configuration, plugins and unrelated files are never selected.</p>
+          <label for="mode">Selection</label>
+          <select id="mode">
+            <option value="older_than">Sessions older than a number of days</option>
+            <option value="all">All archived sessions</option>
+          </select>
+          <div id="daysGroup"><label for="days">Minimum age in days</label><input id="days" type="number" min="0" max="36500" value="30"></div>
+          <label class="check"><input id="includeImages" type="checkbox"> Remove generated images with matching session IDs</label>
+          <div class="actions"><button class="primary" id="previewButton">Preview cleanup</button><button class="secondary" id="refreshButton">Refresh usage</button></div>
+        </article>
+        <article class="card result">
+          <h2>Preview</h2>
+          <div id="resultMessage" class="notice">Choose a retention rule and run a preview.</div>
+          <dl>
+            <dt>Archived sessions</dt><dd id="selectedSessions">—</dd>
+            <dt>Session data</dt><dd id="selectedBytes">—</dd>
+            <dt>Image directories</dt><dd id="selectedImages">—</dd>
+            <dt>Total selected</dt><dd id="selectedTotal">—</dd>
+          </dl>
+          <button class="danger" id="deleteButton" disabled>Delete selected data</button>
+        </article>
+      </div>
+    </section>
+    <section id="terminalView" class="card hidden"><iframe id="terminalFrame" title="Codex web terminal"></iframe></section>
+  </main>
+  <dialog id="confirmDialog">
+    <div class="dialog-body">
+      <h2>Confirm permanent deletion</h2>
+      <p>This removes the data shown in the latest preview. Type <code>DELETE</code> to continue.</p>
+      <input id="confirmation" type="text" autocomplete="off" spellcheck="false" aria-label="Type DELETE">
+    </div>
+    <div class="dialog-actions"><button class="secondary" id="cancelDelete">Cancel</button><button class="danger" id="confirmDelete" disabled>Delete permanently</button></div>
+  </dialog>
+  <script>
+    const $ = id => document.getElementById(id);
+    let token = "";
+    let lastPayload = null;
+    const human = bytes => {
+      let value = Number(bytes || 0);
+      const units = ["B","KiB","MiB","GiB","TiB"];
+      let unit = 0;
+      while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+      return `${value.toFixed(unit ? 1 : 0)} ${units[unit]}`;
+    };
+    const api = async (path, options = {}) => {
+      const response = await fetch(path, {cache: "no-store", ...options});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+      return data;
+    };
+    const payload = () => {
+      const mode = $("mode").value;
+      const result = {mode, include_generated_images: $("includeImages").checked};
+      if (mode === "older_than") result.days = Number($("days").value);
+      return result;
+    };
+    async function refreshStatus() {
+      try {
+        const data = await api("api/status");
+        token = data.request_token;
+        $("homeSize").textContent = human(data.codex_home.bytes);
+        $("archiveSize").firstChild.textContent = `${human(data.archived_sessions.bytes)} `;
+        $("archiveCount").textContent = `${data.archived_sessions.count} files`;
+        $("imageSize").textContent = human(data.generated_images.bytes);
+      } catch (error) { showError(error); }
+    }
+    function showError(error) {
+      $("resultMessage").className = "notice error";
+      $("resultMessage").textContent = error.message;
+    }
+    async function preview() {
+      $("previewButton").disabled = true;
+      try {
+        lastPayload = payload();
+        const data = await api("api/preview", {method: "POST", headers: {"Content-Type": "application/json", "X-Codex-Cleanup-Token": token}, body: JSON.stringify(lastPayload)});
+        $("selectedSessions").textContent = data.selected_sessions;
+        $("selectedBytes").textContent = human(data.session_bytes);
+        $("selectedImages").textContent = data.selected_image_directories;
+        $("selectedTotal").textContent = human(data.session_bytes + data.image_bytes);
+        $("resultMessage").className = "notice";
+        $("resultMessage").textContent = data.selected_sessions ? "Preview ready. Review the selection before deleting." : "No archived sessions match this rule.";
+        $("deleteButton").disabled = data.selected_sessions === 0;
+      } catch (error) { lastPayload = null; $("deleteButton").disabled = true; showError(error); }
+      finally { $("previewButton").disabled = false; }
+    }
+    async function deleteSelected() {
+      if (!lastPayload) return;
+      $("confirmDelete").disabled = true;
+      try {
+        const data = await api("api/cleanup", {method: "POST", headers: {"Content-Type": "application/json", "X-Codex-Cleanup-Token": token}, body: JSON.stringify({...lastPayload, confirmation: "DELETE"})});
+        $("confirmDialog").close();
+        $("resultMessage").className = "notice success";
+        $("resultMessage").textContent = `Deleted ${human(data.deleted_bytes)}.`;
+        lastPayload = null;
+        $("deleteButton").disabled = true;
+        await refreshStatus();
+      } catch (error) { $("confirmDialog").close(); showError(error); }
+    }
+    document.querySelectorAll(".tab").forEach(button => button.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(item => item.classList.toggle("active", item === button));
+      const terminal = button.dataset.view === "terminal";
+      $("storageView").classList.toggle("hidden", terminal);
+      $("terminalView").classList.toggle("hidden", !terminal);
+      if (terminal && !$("terminalFrame").src) $("terminalFrame").src = "terminal/";
+    }));
+    $("mode").addEventListener("change", () => { $("daysGroup").classList.toggle("hidden", $("mode").value === "all"); lastPayload = null; $("deleteButton").disabled = true; });
+    $("previewButton").addEventListener("click", preview);
+    $("refreshButton").addEventListener("click", refreshStatus);
+    $("deleteButton").addEventListener("click", () => { $("confirmation").value = ""; $("confirmDelete").disabled = true; $("confirmDialog").showModal(); $("confirmation").focus(); });
+    $("confirmation").addEventListener("input", () => { $("confirmDelete").disabled = $("confirmation").value !== "DELETE"; });
+    $("cancelDelete").addEventListener("click", () => $("confirmDialog").close());
+    $("confirmDelete").addEventListener("click", deleteSelected);
+    refreshStatus();
+  </script>
+</body>
+</html>

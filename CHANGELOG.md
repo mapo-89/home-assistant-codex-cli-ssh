@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-08-14
+
+### Added
+
+- Home Assistant Ingress dashboard with Codex storage information, cleanup
+  preview, explicit deletion confirmation, and the existing web terminal.
+- Loopback-only cleanup API and Nginx ingress proxy.
+- JSON output mode for the `codex-cleanup` CLI.
+- Build tests for cleanup API behavior and dashboard routing.
+- README badges for release metadata, Home Assistant, repository health, and
+  optional project support.
+
+### Changed
+
+- Move `ttyd` from the Ingress listener to container loopback port `8100` and
+  serve it below `/terminal/` through Nginx on port `8099`.
+
+### Security
+
+- Require a random per-start request token and the exact confirmation text
+  `DELETE` for cleanup API deletion requests.
+- Preserve active sessions, authentication, configuration, plugins, skills,
+  attachments, and unrelated files during cleanup.
+
 ## [2.3.1] - 2026-08-14
 
 ### Added

@@ -1,6 +1,6 @@
 # Home Assistant Codex CLI SSH
 
-[![Version](https://img.shields.io/badge/version-2.3.1-03a9f4.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.4.0-03a9f4.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Add--on-41BDF5.svg?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
 [![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-6f42c1.svg)](codex_cli/config.yaml)
@@ -23,8 +23,8 @@ the Home Assistant MCP Server, and includes safe archived-session management.
 
 ## Highlights
 
-- Home Assistant Ingress terminal backed by `ttyd` and persistent `tmux`
-- Safe archived-session cleanup through the `codex-cleanup` CLI
+- Integrated Ingress dashboard with storage overview and confirmed cleanup
+- Browser terminal backed by `ttyd` and a persistent `tmux` session
 - SSH access for Codex Desktop and other clients
 - Persistent Codex authentication, configuration, sessions, skills and plugins
 - Automatic Home Assistant MCP discovery
@@ -53,11 +53,13 @@ only require a catalog reload.
 ### Validate locally
 
 ```sh
-bash -n codex_cli/run.sh codex_cli/ttyd-run
+bash -n codex_cli/run.sh codex_cli/ttyd-run codex_cli/cleanup-api-run codex_cli/nginx-run
 sh -n scripts/install-local.sh
 python3 -c 'compile(open("codex_cli/init_codex.py", encoding="utf-8").read(), "codex_cli/init_codex.py", "exec")'
 python3 codex_cli/tests/test_init_codex.py
 python3 codex_cli/tests/test_codex_cleanup.py
+python3 codex_cli/tests/test_cleanup_api.py
+python3 codex_cli/tests/test_web_ui.py
 ```
 
 After rebuilding, the internal Codex tool integration test can be run from a
@@ -85,12 +87,20 @@ Codex tool execution context whose workspace is `/root`:
 │   ├── init_codex.py
 │   ├── codex-ha
 │   ├── codex-cleanup
+│   ├── cleanup-api
+│   ├── nginx.conf
 │   ├── ttyd-run
+│   ├── cleanup-api-run
+│   ├── nginx-run
+│   ├── web/
+│   │   └── index.html
 │   └── tests/
 │       ├── container-smoke.sh
 │       ├── tooling-integration.sh
 │       ├── test_init_codex.py
-│       └── test_codex_cleanup.py
+│       ├── test_codex_cleanup.py
+│       ├── test_cleanup_api.py
+│       └── test_web_ui.py
 └── scripts/
     └── install-local.sh
 ```

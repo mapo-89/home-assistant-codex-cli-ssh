@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bashio
 set -e
 
-bashio::log.info "Starting Codex Ingress web terminal"
+bashio::log.info "Starting Codex web terminal backend"
 while [[ ! -f /root/.bash_profile ]]; do
     sleep 0.2
 done
@@ -9,5 +9,7 @@ cd /config || bashio::exit.nok "Home Assistant configuration mount /config is un
 
 exec ttyd \
     --writable \
-    --port 8099 \
+    --interface 127.0.0.1 \
+    --port 8100 \
+    --base-path /terminal \
     tmux -u new -A -s codex-cli bash -l

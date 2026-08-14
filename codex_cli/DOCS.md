@@ -26,15 +26,19 @@ Connect with:
 ssh -p 2222 root@HOME_ASSISTANT_IP
 ```
 
-## Web terminal
+## Ingress dashboard
 
-The app runs `ttyd` directly on the internal Home Assistant Ingress port
-`8099`. That port is not mapped to the host network. Browser authentication and
-proxying are handled by Home Assistant, while the existing SSH port remains
-available for desktop clients.
+The app exposes an Ingress dashboard through Nginx on internal port `8099`.
+Nginx serves the storage controls and proxies the terminal at `/terminal/` to
+`ttyd` on container loopback port `8100`. The cleanup API listens only on
+container loopback port `8101`; neither backend is mapped to the host network.
+Browser authentication and proxying are handled by Home Assistant, while the
+existing SSH port remains available for desktop clients.
 
-The web terminal attaches to a `tmux` session named `codex-cli` and starts in
-`/config`. Closing the browser does not stop processes in that terminal. A
+The dashboard displays the size of archived sessions, generated images, and the
+complete persistent Codex directory. Its **Terminal** tab attaches to a `tmux`
+session named `codex-cli` and starts in `/config`. Closing the browser does not
+stop processes in that terminal. A
 later browser connection reattaches to the same session. Multiple browser
 connections share that root shell, so only trusted Home Assistant users should
 be granted access to this privileged app.
@@ -149,6 +153,16 @@ Supervisor and Home Assistant Core APIs, the Docker API, hardware access, and fu
 
 ## Archived-session cleanup
 
+The dashboard **Storage** tab can refresh usage, preview all archived sessions
+or sessions older than a chosen number of days, and optionally include matching
+generated-image directories. Deletion stays disabled until a preview selects
+items and the confirmation dialog receives the exact text `DELETE`.
+
+The dashboard calls a loopback-only API. The API issues a random request token
+on each app start, requires it for deletion, and invokes `codex-cleanup` with an
+argument list rather than a shell command. The CLI remains available for local
+automation.
+
 `codex-cleanup` reports persistent storage use without changing anything:
 
 ```sh
@@ -211,9 +225,10 @@ Home Assistant MCP configuration is present
 ### Tooling integration test
 
 The image build runs `/usr/local/libexec/container-smoke.sh`, which verifies
-that `patch`, `ttyd`, `tmux`, and `codex-cleanup` are installed,
+that `patch`, `ttyd`, `tmux`, Nginx, and `codex-cleanup` are installed,
 `CODEX_HOME=/data/codex`, and `/root/.codex` is not a symlink. The build also
-runs the cleanup CLI safety tests.
+runs cleanup CLI and API tests plus static checks for the Ingress routes and
+dashboard controls.
 
 The internal `apply_patch` helper exists only inside a Codex tool execution
 context. From a Codex session whose workspace is `/root`, ask Codex to run:
@@ -249,8 +264,9 @@ The configured `workspace` must be an existing directory. If it is unavailable, 
 
 ### Web UI returns 502
 
-Check the app log for `Starting Codex Ingress web terminal`. If the message is
-missing, rebuild version `2.3.0` rather than only restarting an older image.
+Check the app logs for the Nginx, cleanup API, and ttyd services. Rebuild
+version `2.4.0` or newer rather than only restarting an older image. A short 502
+during service startup can be resolved by reopening the page.
 
 ### `apply_patch` reports a writable symlink error
 

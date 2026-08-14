@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Ingress-only JSON API for safe archived-session cleanup."""
+from __future__ import annotations
+
+import hmac
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
+import os
+import secrets
+import subprocess
+from urllib.parse import urlsplit
+
+
+LISTEN_HOST = "127.0.0.1"
+LISTEN_PORT = int(os.environ.get("CLEANUP_API_PORT", "8101"))
+CLEANUP_COMMAND = os.environ.get("CODEX_CLEANUP_BIN", "/usr/local/bin/codex-cleanup")
+CSRF_TOKEN = secrets.token_urlsafe(32)
+MAX_BODY = 8192
+
+
+def run_cleanup(arguments: list[str]) -> dict:
+    environment = os.environ.copy()
+    environment.setdefault("CODEX_HOME", "/data/codex")
+    completed = subprocess.run(
+        [CLEANUP_COMMAND, *arguments, "--json"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=environment,
+    )
+    return json.loads(completed.stdout)
+
+
+def cleanup_arguments(payload: dict, delete: bool) -> list[str]:
+    mode = payload.get("mode")
+    if mode == "all":
+        arguments = ["archived", "--all"]
+    elif mode == "older_than":
+        days = payload.get("days")
+        if isinstance(days, bool) or not isinstance(days, int) or not 0 <= days <= 36500:
+            raise ValueError("days must be an integer between 0 and 36500")
+        arguments = ["archived", "--older-than", str(days)]
+    else:
+        raise ValueError("mode must be all or older_than")
+    include_images = payload.get("include_generated_images")
+    if include_images is True:
+        arguments.append("--include-generated-images")
+    elif include_images not in (False, None):
+        raise ValueError("include_generated_images must be a boolean")
+    if delete:
+        if payload.get("confirmation") != "DELETE":
+            raise PermissionError("confirmation must equal DELETE")
+        arguments.append("--yes")
+    return arguments
+
+
+class CleanupHandler(BaseHTTPRequestHandler):
+    server_version = "CodexCleanupAPI/1"
+
+    def send_json(self, status: int, payload: dict) -> None:
+        body = json.dumps(payload, sort_keys=True).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def require_token(self) -> bool:
+        supplied = self.headers.get("X-Codex-Cleanup-Token", "")
+        if not hmac.compare_digest(supplied, CSRF_TOKEN):
+            self.send_json(403, {"error": "invalid request token"})
+            return False
+        return True
+
+    def read_payload(self) -> dict:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as exc:
+            raise ValueError("invalid content length") from exc
+        if not 0 < length <= MAX_BODY:
+            raise ValueError("request body must be between 1 and 8192 bytes")
+        payload = json.loads(self.rfile.read(length))
+        if not isinstance(payload, dict):
+            raise ValueError("request body must be a JSON object")
+        return payload
+
+    def do_GET(self) -> None:  # noqa: N802
+        if urlsplit(self.path).path != "/api/status":
+            self.send_json(404, {"error": "not found"})
+            return
+        try:
+            result = run_cleanup(["status"])
+            result["request_token"] = CSRF_TOKEN
+            self.send_json(200, result)
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
+            self.send_json(500, {"error": f"storage status failed: {exc}"})
+
+    def do_POST(self) -> None:  # noqa: N802
+        path = urlsplit(self.path).path
+        if path not in ("/api/preview", "/api/cleanup"):
+            self.send_json(404, {"error": "not found"})
+            return
+        if not self.require_token():
+            return
+        try:
+            payload = self.read_payload()
+            result = run_cleanup(cleanup_arguments(payload, path == "/api/cleanup"))
+            self.send_json(200, result)
+        except PermissionError as exc:
+            self.send_json(403, {"error": str(exc)})
+        except (ValueError, json.JSONDecodeError) as exc:
+            self.send_json(400, {"error": str(exc)})
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.send_json(500, {"error": f"cleanup failed: {exc}"})
+
+    def log_message(self, format_string: str, *arguments: object) -> None:
+        print(f"[cleanup-api] {self.address_string()} {format_string % arguments}")
+
+
+def main() -> None:
+    server = ThreadingHTTPServer((LISTEN_HOST, LISTEN_PORT), CleanupHandler)
+    server.daemon_threads = True
+    print(f"[cleanup-api] listening on {LISTEN_HOST}:{LISTEN_PORT}", flush=True)
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

@@ -18,6 +18,7 @@ RUN apk add --no-cache \
       bash \
       ca-certificates \
       git \
+      nginx \
       nodejs \
       npm \
       openssh-server \
@@ -43,21 +44,44 @@ COPY init_codex.py /usr/local/libexec/init_codex.py
 COPY codex-ha /usr/local/bin/codex-ha
 COPY codex-cleanup /usr/local/bin/codex-cleanup
 COPY ttyd-run /etc/services.d/ttyd/run
+COPY cleanup-api /usr/local/libexec/cleanup-api
+COPY cleanup-api-run /etc/services.d/codex-cleanup-api/run
+COPY nginx-run /etc/services.d/codex-web/run
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY web/ /usr/local/share/codex-web/
+COPY config.yaml /tmp/codex-addon-config.yaml
 COPY tests/container-smoke.sh /usr/local/libexec/container-smoke.sh
 COPY tests/tooling-integration.sh /usr/local/libexec/codex-tooling-integration.sh
 COPY tests/test_codex_cleanup.py /usr/local/libexec/test_codex_cleanup.py
+COPY tests/test_cleanup_api.py /usr/local/libexec/test_cleanup_api.py
+COPY tests/test_web_ui.py /usr/local/libexec/test_web_ui.py
 RUN chmod 755 \
       /run.sh \
       /usr/local/libexec/init_codex.py \
       /usr/local/bin/codex-ha \
       /usr/local/bin/codex-cleanup \
       /etc/services.d/ttyd/run \
+      /usr/local/libexec/cleanup-api \
+      /etc/services.d/codex-cleanup-api/run \
+      /etc/services.d/codex-web/run \
       /usr/local/libexec/container-smoke.sh \
       /usr/local/libexec/codex-tooling-integration.sh \
       /usr/local/libexec/test_codex_cleanup.py \
+      /usr/local/libexec/test_cleanup_api.py \
+      /usr/local/libexec/test_web_ui.py \
     && /usr/local/libexec/container-smoke.sh \
+    && nginx -t \
     && CODEX_CLEANUP_BIN=/usr/local/bin/codex-cleanup \
-      python3 /usr/local/libexec/test_codex_cleanup.py
+      python3 /usr/local/libexec/test_codex_cleanup.py \
+    && CODEX_CLEANUP_BIN=/usr/local/bin/codex-cleanup \
+      CLEANUP_API_BIN=/usr/local/libexec/cleanup-api \
+      python3 /usr/local/libexec/test_cleanup_api.py \
+    && CODEX_WEB_TEST_CONFIG=/tmp/codex-addon-config.yaml \
+      CODEX_WEB_TEST_NGINX=/etc/nginx/nginx.conf \
+      CODEX_WEB_TEST_TTYD=/etc/services.d/ttyd/run \
+      CODEX_WEB_TEST_PAGE=/usr/local/share/codex-web/index.html \
+      python3 /usr/local/libexec/test_web_ui.py \
+    && rm -f /tmp/codex-addon-config.yaml
 
 EXPOSE 22 8099
 CMD [ "/run.sh" ]
