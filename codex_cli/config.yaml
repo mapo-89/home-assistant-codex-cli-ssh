@@ -1,5 +1,5 @@
 name: "Codex CLI SSH"
-version: "2.2.1"
+version: "2.3.0"
 slug: "codex_cli_ssh"
 description: "Privileged SSH/CLI workspace with persistent Codex and Home Assistant MCP configuration"
 url: "https://developers.openai.com/codex/cli"
@@ -7,6 +7,10 @@ startup: services
 boot: auto
 init: false
 advanced: true
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:console
+panel_title: Codex CLI
 arch:
   - amd64
   - aarch64

@@ -1,0 +1,13 @@
+#!/usr/bin/with-contenv bashio
+set -e
+
+bashio::log.info "Starting Codex Ingress web terminal"
+while [[ ! -f /root/.bash_profile ]]; do
+    sleep 0.2
+done
+cd /config || bashio::exit.nok "Home Assistant configuration mount /config is unavailable"
+
+exec ttyd \
+    --writable \
+    --port 8099 \
+    tmux -u new -A -s codex-cli bash -l

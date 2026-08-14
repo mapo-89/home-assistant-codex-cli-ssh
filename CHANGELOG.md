@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-08-14
+
+### Added
+
+- Home Assistant Ingress web terminal powered by `ttyd`, with a persistent
+  `tmux` session rooted at `/config`.
+- Sidebar metadata for the **Codex CLI** web terminal.
+- `codex-cleanup` storage report and explicit archived-session cleanup with
+  dry-run behavior, age selection, optional matching-image removal, and
+  symlink protection.
+- Build tests for web-terminal dependencies and cleanup safety.
+
+### Security
+
+- Keep the web-terminal port internal to Home Assistant Ingress; no additional
+  host port is published.
+- Require `--yes` before cleanup deletes anything and leave active sessions,
+  authentication, configuration, and unrelated files untouched.
+
 ## [2.2.1] - 2026-08-14
 
 ### Changed

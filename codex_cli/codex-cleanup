@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Safely inspect and remove archived Codex sessions."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import time
+
+
+CODEX_HOME = Path(os.environ.get("CODEX_HOME", "/data/codex"))
+ARCHIVED_SESSIONS = CODEX_HOME / "archived_sessions"
+GENERATED_IMAGES = CODEX_HOME / "generated_images"
+SESSION_PATTERN = re.compile(
+    r"^rollout-.*-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
+    r"[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$"
+)
+
+
+def human_size(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if value < 1024 or unit == "TiB":
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    raise AssertionError("unreachable")
+
+
+def path_size(path: Path) -> int:
+    if path.is_symlink():
+        return 0
+    if path.is_file():
+        return path.stat().st_size
+    if not path.is_dir():
+        return 0
+    return sum(
+        item.stat().st_size
+        for item in path.rglob("*")
+        if item.is_file() and not item.is_symlink()
+    )
+
+
+def archived_sessions() -> list[Path]:
+    if not ARCHIVED_SESSIONS.is_dir():
+        return []
+    return sorted(
+        item
+        for item in ARCHIVED_SESSIONS.iterdir()
+        if item.is_file() and not item.is_symlink() and SESSION_PATTERN.match(item.name)
+    )
+
+
+def generated_image_directory(session: Path) -> Path | None:
+    match = SESSION_PATTERN.match(session.name)
+    if not match:
+        return None
+    directory = GENERATED_IMAGES / match.group(1)
+    if directory.parent != GENERATED_IMAGES or directory.is_symlink():
+        return None
+    return directory if directory.is_dir() else None
+
+
+def print_status(json_output: bool = False) -> None:
+    sessions = archived_sessions()
+    session_bytes = sum(path_size(item) for item in sessions)
+    image_bytes = path_size(GENERATED_IMAGES)
+    data = {
+        "archived_sessions": {"count": len(sessions), "bytes": session_bytes},
+        "generated_images": {"bytes": image_bytes},
+        "codex_home": {"bytes": path_size(CODEX_HOME)},
+    }
+    if json_output:
+        print(json.dumps(data, sort_keys=True))
+        return
+    print(f"Archived Codex sessions: {len(sessions)} files, {human_size(session_bytes)}")
+    print(f"Generated images: {human_size(image_bytes)}")
+    print(f"Persistent Codex home: {human_size(path_size(CODEX_HOME))}")
+
+
+def select_sessions(all_sessions: bool, older_than: int | None) -> list[Path]:
+    sessions = archived_sessions()
+    if all_sessions:
+        return sessions
+    assert older_than is not None
+    cutoff = time.time() - older_than * 86400
+    return [item for item in sessions if item.stat().st_mtime <= cutoff]
+
+
+def clean_archived(args: argparse.Namespace) -> int:
+    selected = select_sessions(args.all_sessions, args.older_than)
+    image_dirs = []
+    if args.include_generated_images:
+        image_dirs = [
+            directory
+            for session in selected
+            if (directory := generated_image_directory(session)) is not None
+        ]
+    selected_bytes = sum(path_size(item) for item in selected)
+    image_bytes = sum(path_size(item) for item in image_dirs)
+    result = {
+        "selected_sessions": len(selected),
+        "session_bytes": selected_bytes,
+        "selected_image_directories": len(image_dirs),
+        "image_bytes": image_bytes,
+        "deleted": bool(args.yes),
+        "deleted_bytes": selected_bytes + image_bytes if args.yes else 0,
+        "dry_run": not args.yes,
+    }
+
+    if args.json:
+        if args.yes:
+            for session in selected:
+                session.unlink()
+            for directory in image_dirs:
+                shutil.rmtree(directory)
+        print(json.dumps(result, sort_keys=True))
+        return 0
+
+    print(
+        f"Selected {len(selected)} archived sessions "
+        f"({human_size(selected_bytes)})"
+    )
+    if args.include_generated_images:
+        print(
+            f"Selected {len(image_dirs)} matching generated-image directories "
+            f"({human_size(image_bytes)})"
+        )
+    if not selected:
+        return 0
+    if not args.yes:
+        print("Dry run only; repeat with --yes to delete the selected data.")
+        return 0
+
+    for session in selected:
+        session.unlink()
+    for directory in image_dirs:
+        shutil.rmtree(directory)
+    print(f"Deleted approximately {human_size(selected_bytes + image_bytes)}.")
+    return 0
+
+
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(
+        description="Inspect or remove archived Codex sessions without touching auth or active sessions."
+    )
+    commands = result.add_subparsers(dest="command")
+    status = commands.add_parser("status", help="Show persistent Codex storage usage")
+    status.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
+    archived = commands.add_parser("archived", help="Select archived sessions for removal")
+    selection = archived.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--all", dest="all_sessions", action="store_true")
+    selection.add_argument("--older-than", type=int, metavar="DAYS")
+    archived.add_argument(
+        "--include-generated-images",
+        action="store_true",
+        help="Also remove generated-image directories whose session ID matches",
+    )
+    archived.add_argument(
+        "--yes",
+        action="store_true",
+        help="Perform deletion; without this flag the command is a dry run",
+    )
+    archived.add_argument("--json", action="store_true", help=argparse.SUPPRESS)
+    return result
+
+
+def main() -> int:
+    arguments = parser().parse_args()
+    if arguments.command in (None, "status"):
+        print_status(getattr(arguments, "json", False))
+        return 0
+    if arguments.command == "archived":
+        if arguments.older_than is not None and arguments.older_than < 0:
+            parser().error("--older-than must be zero or greater")
+        return clean_archived(arguments)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

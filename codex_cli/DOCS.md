@@ -17,10 +17,33 @@ workspace: "/config"
 
 6. Install or update the local add-on, then start it. The default host port is `2222`.
 
+Click **Open Web UI** on the app page to use the built-in terminal. Enable
+**Show in sidebar** if you want a permanent **Codex CLI** navigation entry.
+
 Connect with:
 
 ```sh
 ssh -p 2222 root@HOME_ASSISTANT_IP
+```
+
+## Web terminal
+
+The app runs `ttyd` directly on the internal Home Assistant Ingress port
+`8099`. That port is not mapped to the host network. Browser authentication and
+proxying are handled by Home Assistant, while the existing SSH port remains
+available for desktop clients.
+
+The web terminal attaches to a `tmux` session named `codex-cli` and starts in
+`/config`. Closing the browser does not stop processes in that terminal. A
+later browser connection reattaches to the same session. Multiple browser
+connections share that root shell, so only trusted Home Assistant users should
+be granted access to this privileged app.
+
+Start Codex from the web terminal with either:
+
+```sh
+codex
+codex-ha
 ```
 
 ## Persistence
@@ -124,6 +147,45 @@ codex-ha
 
 Supervisor and Home Assistant Core APIs, the Docker API, hardware access, and full add-on access are also enabled.
 
+## Archived-session cleanup
+
+`codex-cleanup` reports persistent storage use without changing anything:
+
+```sh
+codex-cleanup status
+```
+
+Preview deletion of all archived sessions:
+
+```sh
+codex-cleanup archived --all
+```
+
+Preview archived sessions whose file modification time is at least 30 days
+old:
+
+```sh
+codex-cleanup archived --older-than 30
+```
+
+Every cleanup command is a dry run unless `--yes` is supplied. After reviewing
+the preview, perform the selected deletion with:
+
+```sh
+codex-cleanup archived --older-than 30 --yes
+```
+
+Generated images are retained by default. To remove only image directories
+whose session ID matches a selected archived session, add the explicit option:
+
+```sh
+codex-cleanup archived --all --include-generated-images --yes
+```
+
+The command only considers direct, non-symlink `rollout-*.jsonl` files in
+`/data/codex/archived_sessions`. It never selects active sessions,
+`auth.json`, `config.toml`, plugins, skills, attachments, or unrelated files.
+
 ## Root access boundary
 
 `full_access: true` grants privileged hardware and container access, but it does not mount the real Home Assistant OS root filesystem at `/`. Home Assistant only permits the managed directory mappings listed above; `/` is not a valid map target.
@@ -149,8 +211,9 @@ Home Assistant MCP configuration is present
 ### Tooling integration test
 
 The image build runs `/usr/local/libexec/container-smoke.sh`, which verifies
-that `patch` is installed, `CODEX_HOME=/data/codex`, and `/root/.codex` is not a
-symlink.
+that `patch`, `ttyd`, `tmux`, and `codex-cleanup` are installed,
+`CODEX_HOME=/data/codex`, and `/root/.codex` is not a symlink. The build also
+runs the cleanup CLI safety tests.
 
 The internal `apply_patch` helper exists only inside a Codex tool execution
 context. From a Codex session whose workspace is `/root`, ask Codex to run:
@@ -183,6 +246,11 @@ Restart Codex CLI SSH so its app server reloads `/data/codex/config.toml`. Then 
 ### Workspace does not exist
 
 The configured `workspace` must be an existing directory. If it is unavailable, the add-on falls back to `/config`.
+
+### Web UI returns 502
+
+Check the app log for `Starting Codex Ingress web terminal`. If the message is
+missing, rebuild version `2.3.0` rather than only restarting an older image.
 
 ### `apply_patch` reports a writable symlink error
 

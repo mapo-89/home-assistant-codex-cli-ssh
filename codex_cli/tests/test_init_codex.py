@@ -25,6 +25,8 @@ class RootCodexAliasTests(unittest.TestCase):
         self.assertIn("path: /config", addon_config)
         self.assertIn('workspace: "/config"', addon_config)
         self.assertNotIn("path: /homeassistant", addon_config)
+        self.assertIn("ingress: true", addon_config)
+        self.assertIn("ingress_port: 8099", addon_config)
         self.assertIn("WORKDIR /config", dockerfile)
         self.assertIn("CODEX_WORKSPACE:-/config", launcher)
         self.assertIn('workspace="/config"', run_script)
